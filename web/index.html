@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aichain web miner</title>
+<style>
+  :root {
+    --bg: #eef1f4; --panel: #ffffff; --ink: #1a2230; --muted: #5b6577; --line: #d5dbe3;
+    --accent: #2f5bea; --bar: #9fb3d9; --hit: #c98a12;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #12161d; --panel: #1a2029; --ink: #e6eaf0; --muted: #96a0b0; --line: #2b3340;
+      --accent: #7ea0ff; --bar: #3d5288; --hit: #e2a93b; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 "Avenir Next", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 20px 48px; display: grid; gap: 28px;
+    grid-template-columns: minmax(260px, 320px) 1fr; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  h1 { font-size: 1.35rem; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); margin: 0 0 24px; font-size: .95rem; }
+  label { display: block; font-size: .875rem; color: var(--muted); margin: 14px 0 4px; }
+  input { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--panel); color: var(--ink); font: inherit; }
+  input:disabled { opacity: .6; }
+  button { margin-top: 22px; width: 100%; padding: 11px; border: 0; border-radius: 6px; font: inherit; font-weight: 600;
+    background: var(--accent); color: #fff; cursor: pointer; }
+  button[data-on] { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .rate { font-size: clamp(2.6rem, 7vw, 4.2rem); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .unit { color: var(--muted); margin: 6px 0 18px; }
+  #status { color: var(--accent); }
+  canvas { width: 100%; height: 120px; display: block; border-bottom: 1px solid var(--line); }
+  .legend { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--hit); margin-right: 5px; }
+  dl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 22px 0; }
+  @media (max-width: 480px) { dl { grid-template-columns: repeat(2, 1fr); } }
+  dt { font-size: .8rem; color: var(--muted); } dd { margin: 0; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+  .ids { font-size: .82rem; color: var(--muted); overflow-wrap: anywhere; }
+  .ids code { color: var(--ink); }
+  ul { list-style: none; padding: 0; margin: 16px 0 0; font-size: .85rem; color: var(--muted); max-height: 220px; overflow: auto; }
+  li { padding: 3px 0; border-top: 1px solid var(--line); }
+  .chat-panel { grid-column: 1 / -1; min-width: 0; }
+  .chat-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .chat-head h2 { margin:0; font-size:1.15rem; font-weight:650; }
+  .chat-note { color:var(--muted); margin:4px 0 16px; font-size:.9rem; }
+  .chat-thread { border:1px solid var(--line); border-radius:10px; background:var(--panel); padding:14px; min-height:150px; max-height:420px; overflow:auto; display:flex; flex-direction:column; gap:12px; }
+  .bubble { max-width:min(85%, 760px); padding:10px 13px; border-radius:12px; overflow-wrap:anywhere; white-space:pre-wrap; }
+  .bubble.user { align-self:flex-end; background:var(--accent); color:white; border-bottom-right-radius:3px; }
+  .bubble.assistant { align-self:flex-start; background:var(--bg); border:1px solid var(--line); border-bottom-left-radius:3px; }
+  .bubble .speaker { display:block; font-size:.74rem; font-weight:650; opacity:.75; margin-bottom:4px; }
+  .bubble .answer-text { white-space:pre-wrap; }
+  .bubble .wait { color:var(--muted); font-style:italic; }
+  .chat-form { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:end; margin-top:12px; }
+  .chat-form label { margin-top:0; }
+  .chat-form textarea { display:block; width:100%; min-height:66px; max-height:180px; resize:vertical; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--panel); color:var(--ink); font:inherit; }
+  .chat-form button { width:auto; min-width:110px; margin:0; align-self:stretch; }
+  .chat-status { min-height:1.4em; color:var(--muted); font-size:.82rem; margin-top:8px; }
+  .small-button { width:auto; margin:0; padding:6px 10px; background:transparent; color:var(--ink); box-shadow:inset 0 0 0 1px var(--line); font-size:.82rem; }
+  @media (max-width:560px) { .chat-form { grid-template-columns:1fr; } .chat-form button { width:100%; min-height:42px; } .bubble { max-width:96%; } }
+</style>
+</head>
+<body>
+<main>
+  <section>
+    <h1>aichain web miner</h1>
+    <p class="lede">Your browser answers user queries for the pool. You earn coin for every share it finds.</p>
+    <label for="pool">Pool address</label>
+    <input id="pool" autocomplete="off">
+    <label for="seed">Wallet name (your payout key comes from this)</label>
+    <input id="seed" autocomplete="off">
+    <label for="threads">Threads</label>
+    <input id="threads" type="number" min="1" max="32">
+    <button id="toggle">Start mining</button>
+  </section>
+  <section aria-live="polite">
+    <div class="rate" id="rate">0</div>
+    <div class="unit">inference steps per second, <span id="status">idle</span></div>
+    <canvas id="chart" aria-label="Inference rate over the last 90 seconds"></canvas>
+    <div class="legend"><i></i>share found that second</div>
+    <dl>
+      <div><dt>Shares accepted</dt><dd id="shares">0</dd></div>
+      <div><dt>Blocks found</dt><dd id="blocks">0</dd></div>
+      <div><dt>Owed</dt><dd id="owed">0</dd></div>
+      <div><dt>Paid</dt><dd id="paid">0</dd></div>
+    </dl>
+    <p class="ids">Payout address <code id="address">appears when mining starts</code><br>Model <code id="model">not loaded</code></p>
+    <ul id="log"></ul>
+  </section>
+  <section class="chat-panel" aria-label="AIChain inquiry chat">
+    <div class="chat-head">
+      <div>
+        <h2>Ask AIChain</h2>
+        <p class="chat-note">Send an inquiry to the network and follow its status until a miner returns an answer.</p>
+      </div>
+      <button type="button" class="small-button" id="chat-clear">Clear this chat</button>
+    </div>
+    <div id="chat-thread" class="chat-thread" role="log" aria-live="polite" aria-relevant="additions text">
+      <div class="bubble assistant"><span class="speaker">AIChain</span><span class="answer-text">Hello! Send a question below to create an inquiry on the AIChain network.</span></div>
+    </div>
+    <form id="chat-form" class="chat-form">
+      <label style="grid-column:1/-1" for="chat-question">Your inquiry (up to 512 characters)</label>
+      <textarea id="chat-question" maxlength="512" placeholder="Type your question…" required></textarea>
+      <button id="chat-send" type="submit">Send inquiry</button>
+    </form>
+    <div id="chat-status" class="chat-status" role="status">Ready</div>
+    <p class="chat-note">Prototype note: this project currently uses TinyLM, a deterministic placeholder model, so answers are not human-quality AI responses. Inquiries incur the configured job fee.</p>
+  </section>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const thread = $('chat-thread'), form = $('chat-form'), questionIn = $('chat-question');
+  const sendButton = $('chat-send'), statusLine = $('chat-status');
+  const SESSION_KEY = 'aichain-chat-session-v1';
+  let sessionId = '';
+  try {
+    sessionId = localStorage.getItem(SESSION_KEY) || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2));
+    localStorage.setItem(SESSION_KEY, sessionId);
+  } catch { sessionId = 'session-' + Math.random().toString(36).slice(2); }
+  const active = new Map();
+  const esc = value => String(value == null ? '' : value);
+  function bubble(speaker, text, kind, id) {
+    const outer = document.createElement('div'); outer.className = 'bubble ' + kind;
+    if (id) outer.dataset.inquiryId = id;
+    const label = document.createElement('span'); label.className = 'speaker'; label.textContent = speaker;
+    const body = document.createElement('span'); body.className = 'answer-text'; body.textContent = text;
+    outer.append(label, body); thread.appendChild(outer); thread.scrollTop = thread.scrollHeight;
+    return { outer, body };
+  }
+  function setInquiryStatus(item) {
+    const refs = active.get(item.id); if (!refs) return;
+    if (item.status === 'done') {
+      refs.body.classList.remove('wait');
+      refs.body.textContent = esc(item.answer) + (item.height ? '\n\nBlock height: ' + item.height : '');
+      active.delete(item.id); statusLine.textContent = 'Inquiry answered.';
+    } else if (item.status === 'error') {
+      refs.body.classList.remove('wait'); refs.body.textContent = 'Could not retrieve answer: ' + esc(item.error || 'unknown error');
+      active.delete(item.id); statusLine.textContent = 'Inquiry failed.';
+    } else {
+      refs.body.classList.add('wait'); refs.body.textContent = 'Queued on AIChain — waiting for a miner…';
+    }
+  }
+  async function poll(id) {
+    if (!active.has(id)) return;
+    try {
+      const response = await fetch('/api/inquiries/' + encodeURIComponent(id));
+      const item = await response.json();
+      if (!response.ok) throw new Error(item.error || 'Status request failed');
+      setInquiryStatus(item);
+    } catch (error) {
+      const refs = active.get(id);
+      if (refs) refs.body.textContent = 'Temporarily unable to check status. Retrying…';
+    }
+    if (active.has(id)) setTimeout(() => poll(id), 1800);
+  }
+  async function restoreHistory() {
+    try {
+      const r = await fetch('/api/inquiries?sessionId=' + encodeURIComponent(sessionId));
+      if (!r.ok) return;
+      const data = await r.json();
+      if (!data.items || !data.items.length) return;
+      thread.replaceChildren();
+      for (const item of data.items) {
+        bubble('You', item.question, 'user');
+        const refs = bubble('AIChain', item.status === 'done' ? esc(item.answer) + (item.height ? '\n\nBlock height: ' + item.height : '') : 'Loading inquiry…', 'assistant', item.id);
+        if (item.status === 'pending') { active.set(item.id, refs); poll(item.id); }
+        else if (item.status === 'error') refs.body.textContent = 'Could not retrieve answer: ' + esc(item.error || 'unknown error');
+      }
+      thread.scrollTop = thread.scrollHeight;
+    } catch { /* chat remains usable if history is temporarily unavailable */ }
+  }
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const question = questionIn.value.trim();
+    if (!question || sendButton.disabled) return;
+    bubble('You', question, 'user');
+    const refs = bubble('AIChain', 'Submitting inquiry to the network…', 'assistant');
+    sendButton.disabled = true; questionIn.disabled = true; statusLine.textContent = 'Submitting inquiry…';
+    try {
+      const response = await fetch('/api/inquiries', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({question, sessionId}) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'The inquiry could not be submitted.');
+      refs.outer.dataset.inquiryId = result.id;
+      refs.body.classList.add('wait'); refs.body.textContent = 'Queued on AIChain — waiting for a miner…';
+      active.set(result.id, refs); questionIn.value = ''; statusLine.textContent = 'Inquiry submitted; waiting for a network answer.';
+      poll(result.id);
+    } catch (error) {
+      refs.body.textContent = 'Submission failed: ' + esc(error.message || error);
+      statusLine.textContent = 'Could not submit inquiry.';
+    } finally {
+      sendButton.disabled = false; questionIn.disabled = false; questionIn.focus();
+    }
+  });
+  $('chat-clear').addEventListener('click', () => {
+    active.clear(); thread.replaceChildren();
+    bubble('AIChain', 'Chat cleared from this browser view. Stored inquiries remain on the server.', 'assistant');
+    statusLine.textContent = 'View cleared';
+  });
+  restoreHistory();
+})();
+</script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# aichain launcher (needs Node.js 20+)
+set -e
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  node|pool|worker|client|devnet) exec node "$DIR/$cmd.mjs" "$@" ;;
+  *) echo "usage: aichain {node|pool|worker|client|devnet} [args]"; exit 1 ;;
+esac

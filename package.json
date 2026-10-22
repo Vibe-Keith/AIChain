@@ -1,0 +1,23 @@
+{
+  "name": "aichain",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "devnet": "node --import tsx src/devnet.ts",
+    "node": "node --import tsx src/node.ts",
+    "client": "node --import tsx src/client.ts",
+    "typecheck": "tsc --noEmit",
+    "pool": "node --import tsx src/pool.ts",
+    "worker": "node --import tsx src/worker.ts",
+    "build:wasm": "python3 tools/build_wasm.py",
+    "build": "npm run build:wasm && node tools/build.mjs",
+    "test:wasm": "node --import tsx tools/test-wasm.ts",
+    "pool:python": "python3 pool.py"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "esbuild": "^0.25.12",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}
